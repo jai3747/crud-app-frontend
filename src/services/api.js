@@ -1,5 +1,5 @@
 // src/services/api.js
-const API_BASE_URL = 'http://172.31.40.92:5000/api';
+const API_BASE_URL = 'http://13.126.233.214:5000/api'; // Using public IP instead of private IP
 
 console.log('🔧 API Service loaded with base URL:', API_BASE_URL);
 
@@ -12,9 +12,9 @@ export const checkConnectivity = async () => {
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
-      console.log('⏰ Request timeout after 5 seconds');
+      console.log('⏰ Request timeout after 10 seconds');
       controller.abort();
-    }, 5000);
+    }, 10000); // Increased timeout to 10 seconds
     
     const response = await fetch(`${API_BASE_URL}/health`, {
       method: 'GET',
@@ -64,10 +64,10 @@ export const checkConnectivity = async () => {
     
     let message = 'Connection failed';
     if (error.name === 'AbortError') {
-      message = 'Connection timeout after 5 seconds';
-      console.error('❌ Connectivity check timed out after 5 seconds');
+      message = 'Connection timeout after 10 seconds';
+      console.error('❌ Connectivity check timed out after 10 seconds');
     } else if (error.name === 'TypeError') {
-      message = 'Network error - server may not be running';
+      message = 'Network error - server may not be running or CORS issue';
       console.error('❌ Network error - possibly CORS or server not running');
     } else {
       message = `Connection error: ${error.message}`;
@@ -87,11 +87,16 @@ export const checkConnectivity = async () => {
 
 // User service functions
 export const userService = {
-  // Get all users - FIXED METHOD NAME
+  // Get all users
   getAll: async () => {
     console.log('👥 Fetching all users from:', `${API_BASE_URL}/users`);
     try {
-      const response = await fetch(`${API_BASE_URL}/users`);
+      const response = await fetch(`${API_BASE_URL}/users`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       console.log('📨 getAll response:', {
         status: response.status,
         statusText: response.statusText,
@@ -110,11 +115,16 @@ export const userService = {
     }
   },
 
-  // Get user by ID - FIXED METHOD NAME
+  // Get user by ID
   getById: async (id) => {
     console.log('👤 Fetching user by ID:', id);
     try {
-      const response = await fetch(`${API_BASE_URL}/users/${id}`);
+      const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       console.log('📨 getById response:', {
         status: response.status,
         statusText: response.statusText,
@@ -133,7 +143,7 @@ export const userService = {
     }
   },
 
-  // Create new user - FIXED METHOD NAME
+  // Create new user
   create: async (userData) => {
     console.log('➕ Creating new user:', { name: userData.name, email: userData.email });
     try {
@@ -165,7 +175,7 @@ export const userService = {
     }
   },
 
-  // Update user - FIXED METHOD NAME
+  // Update user
   update: async (id, userData) => {
     console.log('✏️ Updating user:', id, { name: userData.name, email: userData.email });
     try {
@@ -197,12 +207,15 @@ export const userService = {
     }
   },
 
-  // Delete user - FIXED METHOD NAME
+  // Delete user
   delete: async (id) => {
     console.log('🗑️ Deleting user:', id);
     try {
       const response = await fetch(`${API_BASE_URL}/users/${id}`, {
         method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
       
       console.log('📨 delete response:', {
@@ -238,7 +251,12 @@ export const apiHelper = {
   // Generic GET request
   get: async (endpoint) => {
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`);
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -294,6 +312,9 @@ export const apiHelper = {
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
