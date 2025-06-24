@@ -1,38 +1,67 @@
 // //crud/Home.jsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { userService } from "@services/api";
+import { userService, checkConnectivity } from "@services/api";
 
 const Home = () => {
     const [getData, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [connectionStatus, setConnectionStatus] = useState(null);
+
+    const checkConnection = async () => {
+        try {
+            const status = await checkConnectivity();
+            setConnectionStatus(status);
+            console.log('🔗 Connection status:', status);
+            return status.connected;
+        } catch (error) {
+            console.error('🔗 Connection check failed:', error);
+            setConnectionStatus({ connected: false, message: 'Connection check failed' });
+            return false;
+        }
+    };
 
     const fetchData = async () => {
         setLoading(true);
+        setError("");
+        
         try {
+            // First check connectivity
+            const isConnected = await checkConnection();
+            if (!isConnected) {
+                setError("Unable to connect to server. Please check your connection.");
+                setLoading(false);
+                return;
+            }
+
+            console.log('📋 Fetching user data...');
             const data = await userService.getAll();
+            console.log('✅ Data fetched successfully:', data.length, 'users');
             setData(data);
             setLoading(false);
         } catch (error) {
-            console.error(error);
-            setError("Failed to fetch data");
+            console.error('❌ Fetch error:', error);
+            setError(error.message || "Failed to fetch data");
             setLoading(false);
         }
     };
 
     useEffect(() => {
+        console.log('🚀 Home component mounted, fetching data...');
         fetchData();
     }, []);
 
     const handleDelete = async (id) => {
         if (window.confirm("Are you sure you want to delete this user?")) {
             try {
+                console.log('🗑️ Deleting user:', id);
                 await userService.delete(id);
+                console.log('✅ User deleted, refreshing data...');
                 fetchData();
             } catch (error) {
-                console.error(error);
-                alert("Failed to delete user");
+                console.error('❌ Delete error:', error);
+                alert(error.message || "Failed to delete user");
             }
         }
     };
@@ -44,6 +73,11 @@ const Home = () => {
                     <span className="visually-hidden">Loading...</span>
                 </div>
                 <p className="mt-3 fw-bold text-primary">Loading your data...</p>
+                {connectionStatus && (
+                    <div className="mt-2 text-muted small">
+                        Connection Status: {connectionStatus.connected ? '🟢 Connected' : '🔴 Disconnected'}
+                    </div>
+                )}
             </div>
         );
     }
@@ -51,19 +85,28 @@ const Home = () => {
     if (error) {
         return (
             <div className="d-flex flex-column vh-100 justify-content-center align-items-center" style={{ background: "linear-gradient(to right, #f8f9fa, #e9ecef)" }}>
-                <div className="alert alert-danger border-start border-5 border-danger shadow" role="alert" style={{ maxWidth: "400px" }}>
+                <div className="alert alert-danger border-start border-5 border-danger shadow" role="alert" style={{ maxWidth: "500px" }}>
                     <div className="d-flex">
                         <div className="me-3">
                             <i className="bi bi-exclamation-octagon-fill fs-1 text-danger"></i>
                         </div>
                         <div>
-                            <h4 className="alert-heading">Error Loading Data</h4>
-                            <p className="mb-0">{error}</p>
+                            <h4 className="alert-heading">Connection Error</h4>
+                            <p className="mb-2">{error}</p>
+                            {connectionStatus && !connectionStatus.connected && (
+                                <div className="small text-muted">
+                                    <div>API URL: {connectionStatus.details?.baseUrl}</div>
+                                    <div>Error Code: {connectionStatus.details?.error}</div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
                 <button className="btn btn-primary mt-3 px-4 py-2 fw-bold shadow-sm" onClick={fetchData}>
                     <i className="bi bi-arrow-clockwise me-2"></i>Try Again
+                </button>
+                <button className="btn btn-outline-secondary mt-2 px-4 py-2" onClick={checkConnection}>
+                    <i className="bi bi-wifi me-2"></i>Test Connection
                 </button>
             </div>
         );
@@ -83,6 +126,13 @@ const Home = () => {
                                             <i className="bi bi-people-fill me-2"></i>User Management Dashboard
                                         </h4>
                                         <p className="text-white-50 mb-0">Manage your users with ease</p>
+                                        {connectionStatus && (
+                                            <div className="mt-1">
+                                                <span className={`badge ${connectionStatus.connected ? 'bg-success' : 'bg-warning'}`}>
+                                                    {connectionStatus.connected ? '🟢 Online' : '🟡 Offline'}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                     <Link to="/create" className="btn btn-light text-primary fw-bold px-4">
                                         <i className="bi bi-plus-circle-fill me-2"></i>Add New User
@@ -112,6 +162,9 @@ const Home = () => {
                                                 </h5>
                                             </div>
                                             <div className="col-auto">
+                                                <button className="btn btn-outline-secondary btn-sm me-2" onClick={checkConnection}>
+                                                    <i className="bi bi-wifi me-1"></i>Test Connection
+                                                </button>
                                                 <button className="btn btn-outline-secondary btn-sm" onClick={fetchData}>
                                                     <i className="bi bi-arrow-repeat me-1"></i>Refresh
                                                 </button>
@@ -172,9 +225,14 @@ const Home = () => {
                                         <i className="bi bi-people-fill me-1"></i>
                                         Total Users: <span className="fw-bold">{getData.length}</span>
                                     </div>
-                                    <div className="text-muted small">
+                                    <div className="text-muted small d-flex align-items-center">
                                         <i className="bi bi-clock-history me-1"></i>
                                         Last updated: {new Date().toLocaleString()}
+                                        {connectionStatus && (
+                                            <span className={`ms-3 badge ${connectionStatus.connected ? 'bg-success' : 'bg-danger'}`}>
+                                                {connectionStatus.connected ? 'Connected' : 'Disconnected'}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
